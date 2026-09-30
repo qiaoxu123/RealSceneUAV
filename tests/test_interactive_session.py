@@ -10,7 +10,7 @@ from realsceneuav.scenes.mock import MockRealScene
 from realsceneuav.tasks.sampler import sample_task
 
 
-def test_interactive_session_records_events_and_observations(tmp_path):
+def test_interactive_session_records_events_observations_and_metadata(tmp_path):
     scene = MockRealScene()
     task = sample_task(scene, seed=9)
     task.max_duration_s = 2.0
@@ -64,6 +64,13 @@ def test_interactive_session_records_events_and_observations(tmp_path):
         if observation["depth_file"]:
             assert (root / observation["depth_file"]).exists()
 
+    metadata = json.loads((root / "metadata.json").read_text())
+    assert metadata["scene_id"] == "mock-real-scene"
+    assert metadata["control_hz"] == 20.0
+    assert metadata["camera_hz"] == 10.0
+    assert metadata["controller"]["backend"] == "ScriptedController"
+    assert metadata["dynamics"]["backend"] == "ReferenceQuadrotorDynamics"
+    assert metadata["dynamics"]["validated_real_aircraft_model"] is False
 
 
 def test_user_stop_reports_success_when_already_at_target(tmp_path):
