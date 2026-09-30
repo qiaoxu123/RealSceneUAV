@@ -201,6 +201,27 @@ SensatUrban UAV 航拍
 
 这里的 RGB / Depth 来自真实采集城市数据，而不是合成游戏场景。
 
+安装 CityNav raster 支持：
+
+```bash
+pip install -e ".[citynav]"
+```
+
+验证一条真实 Human Trajectory 与 raster 坐标：
+
+```bash
+realsceneuav-citynav-validate \
+  --trajectory-json data/citynav_train_seen.json \
+  --episode-index 0 \
+  --rgb-png data/rgbd/cambridge_block_2.png \
+  --height-tif data/rgbd/cambridge_block_2.tif \
+  --output outputs/citynav_episode_0
+```
+
+详细说明：
+
+[docs/citynav_raster.md](docs/citynav_raster.md)
+
 ## 7. 数据集扩展方式
 
 新的真实场景数据集只需要实现 `SceneAdapter`：
@@ -241,11 +262,11 @@ class MyDatasetAdapter(SceneAdapter):
 ### M2：CityNav / SensatUrban 真场景
 
 - [ ] CityRefer object / description 加载
-- [ ] CityNav episode 精确复现
-- [ ] SensatUrban RGB + Height GeoTIFF 接入
-- [ ] ground-height 查询
-- [ ] Human trajectory replay
-- [ ] Top-down trajectory viewer
+- [x] CityNav episode 精确复现
+- [x] SensatUrban RGB + Height GeoTIFF 接入
+- [x] 官方 block ground-level 查询
+- [x] Human trajectory pose 统一与 replay 基础
+- [x] Top-down trajectory 离线验证
 - [ ] 第一视角 RGB / Depth live viewer
 - [ ] OSM landmark layer
 
