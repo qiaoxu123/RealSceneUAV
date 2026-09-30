@@ -12,6 +12,14 @@ from realsceneuav.scenes.base import Observation
 from realsceneuav.tasks.navigation import NavigationTask
 
 
+def _json_default(value: Any) -> Any:
+    if isinstance(value, np.ndarray):
+        return value.tolist()
+    if isinstance(value, np.generic):
+        return value.item()
+    raise TypeError(f"Object of type {type(value).__name__} is not JSON serializable")
+
+
 class EpisodeRecorder:
     """Write task metadata and synchronized control/state/observation samples."""
 
@@ -74,6 +82,7 @@ class EpisodeRecorder:
                     "max_duration_s": task.max_duration_s,
                 },
                 indent=2,
+                default=_json_default,
             )
         )
 
@@ -123,7 +132,11 @@ class EpisodeRecorder:
                 "t": float(t),
                 "rgb_file": rgb_file,
                 "depth_file": depth_file,
-                "metadata_json": json.dumps(metadata, separators=(",", ":")),
+                "metadata_json": json.dumps(
+                    metadata,
+                    separators=(",", ":"),
+                    default=_json_default,
+                ),
             }
         )
 
@@ -135,7 +148,9 @@ class EpisodeRecorder:
             return
         self._trajectory_fp.close()
         self._observations_fp.close()
-        (self.root / "events.json").write_text(json.dumps(self._events, indent=2))
+        (self.root / "events.json").write_text(
+            json.dumps(self._events, indent=2, default=_json_default)
+        )
         self._closed = True
 
     def __enter__(self) -> "EpisodeRecorder":
