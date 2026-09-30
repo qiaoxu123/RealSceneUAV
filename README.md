@@ -258,7 +258,51 @@ class MyDatasetAdapter(SceneAdapter):
 - 3D Gaussian Splatting
 - 其他真实城市场景导航数据集
 
-## 8. 与已有开源方案的关系
+## 8. PX4 SITL / MAVLink 飞行动力学
+
+RealSceneUAV 已提供 PX4 MAVLink dynamics backend，可以保持 CityNav 场景、Viewer、Switch 和 Recorder 不变，仅替换飞行动力学后端。
+
+安装：
+
+```bash
+pip install -e ".[controller,citynav,px4]"
+```
+
+示例：
+
+```bash
+realsceneuav-citynav-collect \
+  --trajectory-json data/citynav_train_seen.json \
+  --episode-index 0 \
+  --rgb-png data/rgbd/cambridge_block_2.png \
+  --height-tif data/rgbd/cambridge_block_2.tif \
+  --controller gamepad \
+  --controller-config configs/switch_pro.yaml \
+  --dynamics px4 \
+  --px4-connection udpin:0.0.0.0:14540 \
+  --px4-mode POSCTL \
+  --px4-arm
+```
+
+当前 PX4 backend 已实现：
+
+- `MANUAL_CONTROL` 连续输入；
+- `LOCAL_POSITION_NED` / `ATTITUDE` 遥测；
+- NED / FRD 到 CityNav z-up 世界坐标转换；
+- CityNav start position / start yaw 对齐；
+- mode / arm / disarm；
+- telemetry timeout；
+- PX4 不支持伪造的 Pause / Reset，会记录 `pause_unsupported` / `reset_unsupported`。
+
+> 当前代码接口与坐标变换已经实现，但仍需在实际 PX4 SITL + Gazebo 环境中进行端到端验证后，才能把该项标记为完整验证。
+
+> 另外，当前 Gazebo collision geometry 仍不等于 CityNav 真实城市几何。PX4 提供飞控与动力学，CityNav 提供真实场景视觉，这两层目前尚未统一物理碰撞几何。
+
+详细说明：
+
+[docs/px4.md](docs/px4.md)
+
+## 9. 与已有开源方案的关系
 
 | 项目 | 优势 | RealSceneUAV 的区别 |
 |---|---|---|
@@ -272,7 +316,7 @@ class MyDatasetAdapter(SceneAdapter):
 
 其中 **GS-DroneGym** 与我们的目标最接近。后续 3DGS 等模块优先考虑复用成熟方案，而不是重复实现。
 
-## 9. Roadmap
+## 10. Roadmap
 
 ### M2：CityNav / SensatUrban 真场景
 
@@ -297,11 +341,15 @@ class MyDatasetAdapter(SceneAdapter):
 
 ### M4：飞行动力学
 
-- [ ] PX4 SITL
-- [ ] MAVLink manual control
-- [ ] RotorPy
+- [x] PX4 MAVLink backend 基础实现
+- [x] `MANUAL_CONTROL` 连续输入
+- [x] `LOCAL_POSITION_NED` / `ATTITUDE` telemetry
+- [x] NED / FRD -> CityNav world frame 转换
+- [x] PX4 mode / arm / disarm 接口
+- [ ] PX4 SITL + Gazebo 本地端到端验证
+- [ ] RotorPy backend
 - [ ] UAV vehicle profile
-- [ ] Physics / Control / Camera 多频率时钟
+- [ ] CityNav 真实几何与 physics collision 统一
 
 ### M5：数据集与 Benchmark
 
@@ -312,7 +360,7 @@ class MyDatasetAdapter(SceneAdapter):
 - [ ] Replay tool
 - [ ] Parquet / LeRobot 导出
 
-## 10. 可复现原则
+## 11. 可复现原则
 
 每次正式数据采集至少记录：
 
