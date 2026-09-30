@@ -92,7 +92,9 @@ class FlightSession:
                             distance_to_target_m=self.task.distance_to_target(state.position),
                         )
                     elif event.type == ControllerEventType.RESET:
-                        state = self.dynamics.reset(initial)
+                        reset_state = initial.copy()
+                        reset_state.t = state.t
+                        state = self.dynamics.reset(reset_state)
                         next_camera_t = state.t
                         recorder.event("reset", state.t)
                     elif event.type == ControllerEventType.STOP:
