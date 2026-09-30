@@ -10,6 +10,11 @@ from realsceneuav.dynamics.reference import ReferenceQuadrotorDynamics
 class NonTeleportDynamics(ReferenceQuadrotorDynamics):
     def supports_state_reset(self) -> bool:
         return False
+
+
+class NonPauseDynamics(ReferenceQuadrotorDynamics):
+    def supports_pause_freeze(self) -> bool:
+        return False
 from realsceneuav.recording.episode import EpisodeRecorder
 from realsceneuav.scenes.mock import MockRealScene
 from realsceneuav.tasks.sampler import sample_task
@@ -133,3 +138,34 @@ def test_reset_event_is_rejected_for_non_teleportable_backend(tmp_path):
 
     assert "reset" not in event_types
     assert "reset_unsupported" in event_types
+
+
+
+def test_pause_event_is_rejected_when_backend_cannot_freeze(tmp_path):
+    scene = MockRealScene()
+    task = sample_task(scene, seed=6)
+    task.max_duration_s = 1.0
+
+    controller = ScriptedController(
+        events_by_poll={
+            1: [ControllerEvent(ControllerEventType.PAUSE_TOGGLE)],
+            3: [ControllerEvent(ControllerEventType.STOP)],
+        }
+    )
+
+    with EpisodeRecorder(tmp_path, task) as recorder:
+        FlightSession(
+            scene=scene,
+            task=task,
+            dynamics=NonPauseDynamics(),
+            controller=controller,
+            control_hz=20.0,
+            camera_hz=10.0,
+            realtime=False,
+        ).run(recorder)
+
+    events = json.loads((tmp_path / task.episode_id / "events.json").read_text())
+    event_types = [event["type"] for event in events]
+
+    assert "pause" not in event_types
+    assert "pause_unsupported" in event_types
