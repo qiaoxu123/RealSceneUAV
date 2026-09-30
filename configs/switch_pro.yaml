@@ -1,0 +1,13 @@
+controller:
+  type: pygame
+  joystick_index: 0
+  mapping:
+    yaw_axis: 0
+    throttle_axis: 1
+    roll_axis: 2
+    pitch_axis: 3
+    invert_yaw: false
+    invert_throttle: true
+    invert_roll: false
+    invert_pitch: true
+    deadzone: 0.06
