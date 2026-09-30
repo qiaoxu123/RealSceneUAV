@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 
 import numpy as np
 
@@ -86,3 +86,11 @@ class ReferenceQuadrotorDynamics(DynamicsBackend):
             angular_velocity=np.array([0.0, 0.0, yaw_rate], dtype=np.float64),
         )
         return self._state.copy()
+
+
+    def provenance(self) -> dict[str, object]:
+        return {
+            "backend": type(self).__name__,
+            "config": asdict(self.config),
+            "validated_real_aircraft_model": False,
+        }
