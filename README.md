@@ -149,7 +149,11 @@ This creates:
 outputs/mock-real-scene-000000/
 ├── task.json
 ├── trajectory.csv
-└── events.json
+├── events.json
+├── metadata.json
+├── observations.csv
+├── rgb/
+└── depth/
 ```
 
 `trajectory.csv` records synchronized:
