@@ -5,6 +5,9 @@ from realsceneuav.controllers.events import ControllerEvent, ControllerEventType
 from realsceneuav.controllers.scripted import ScriptedController
 from realsceneuav.core.session import FlightSession
 from realsceneuav.dynamics.reference import ReferenceQuadrotorDynamics
+from realsceneuav.recording.episode import EpisodeRecorder
+from realsceneuav.scenes.mock import MockRealScene
+from realsceneuav.tasks.sampler import sample_task
 
 
 class NonTeleportDynamics(ReferenceQuadrotorDynamics):
@@ -15,9 +18,6 @@ class NonTeleportDynamics(ReferenceQuadrotorDynamics):
 class NonPauseDynamics(ReferenceQuadrotorDynamics):
     def supports_pause_freeze(self) -> bool:
         return False
-from realsceneuav.recording.episode import EpisodeRecorder
-from realsceneuav.scenes.mock import MockRealScene
-from realsceneuav.tasks.sampler import sample_task
 
 
 def test_interactive_session_records_events_observations_and_metadata(tmp_path):
@@ -109,7 +109,6 @@ def test_user_stop_reports_success_when_already_at_target(tmp_path):
     assert result.final_distance_m == 0.0
 
 
-
 def test_reset_event_is_rejected_for_non_teleportable_backend(tmp_path):
     scene = MockRealScene()
     task = sample_task(scene, seed=5)
@@ -138,7 +137,6 @@ def test_reset_event_is_rejected_for_non_teleportable_backend(tmp_path):
 
     assert "reset" not in event_types
     assert "reset_unsupported" in event_types
-
 
 
 def test_pause_event_is_rejected_when_backend_cannot_freeze(tmp_path):
