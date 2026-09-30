@@ -153,7 +153,7 @@ class EpisodeRecorder:
         )
         self._closed = True
 
-    def __enter__(self) -> "EpisodeRecorder":
+    def __enter__(self) -> EpisodeRecorder:
         return self
 
     def __exit__(self, exc_type, exc, tb) -> None:
