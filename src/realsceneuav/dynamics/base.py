@@ -26,6 +26,11 @@ class DynamicsBackend(ABC):
 
         return True
 
+    def supports_pause_freeze(self) -> bool:
+        """Whether the backend can freeze its physical state while a session is paused."""
+
+        return True
+
     def provenance(self) -> dict[str, Any]:
         """Serializable description of the vehicle backend used for an episode."""
 
