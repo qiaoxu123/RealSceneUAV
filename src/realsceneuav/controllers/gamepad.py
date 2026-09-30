@@ -1,6 +1,9 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from pathlib import Path
+
+import yaml
 
 from realsceneuav.controllers.events import ControllerEvent, ControllerEventType
 from realsceneuav.controllers.interactive import InteractiveController
@@ -26,6 +29,20 @@ class GamepadMapping:
     stop_button: int = 1
     reset_button: int = 3
     pause_button: int = 6
+
+
+def load_gamepad_config(path: str | Path) -> tuple[GamepadMapping, int]:
+    """Load a reproducible SDL mapping and joystick index from YAML."""
+
+    config_path = Path(path)
+    raw = yaml.safe_load(config_path.read_text()) or {}
+    controller = raw.get("controller", {})
+    if controller.get("type", "pygame") != "pygame":
+        raise ValueError("Only controller.type=pygame is supported by this backend")
+
+    mapping = GamepadMapping(**(controller.get("mapping") or {}))
+    joystick_index = int(controller.get("joystick_index", 0))
+    return mapping, joystick_index
 
 
 class PygameGamepadController(InteractiveController):
