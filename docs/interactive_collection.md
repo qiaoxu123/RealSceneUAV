@@ -38,7 +38,8 @@ reset vehicle to episode start
 ```
 
 Button indices vary across SDL drivers, so they are configuration values rather than hard-coded
-Nintendo labels.
+Nintendo labels. The collector reads the YAML mapping at runtime, so the exact axis/button
+assignment used for a data-collection session is explicit and reproducible.
 
 ## 3. Run a reproducible dry run
 
@@ -55,6 +56,7 @@ This validates the session, dynamics, scene adapter and recorder.
 ```bash
 realsceneuav-collect \
   --controller gamepad \
+  --controller-config configs/switch_pro.yaml \
   --duration 300 \
   --control-hz 50 \
   --camera-hz 10
