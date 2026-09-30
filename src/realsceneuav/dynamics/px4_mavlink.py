@@ -197,6 +197,9 @@ class Px4MavlinkBackend(DynamicsBackend):
     def supports_state_reset(self) -> bool:
         return False
 
+    def supports_pause_freeze(self) -> bool:
+        return False
+
     def _request_message_interval(self, message_id: int) -> None:
         interval_us = int(round(1_000_000.0 / self.config.telemetry_hz))
         self.connection.mav.command_long_send(
