@@ -119,7 +119,6 @@ class PygameGamepadController(InteractiveController):
         self._pending_events = []
         return events
 
-
     def provenance(self) -> dict[str, object]:
         return {
             "backend": type(self).__name__,
