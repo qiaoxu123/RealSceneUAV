@@ -21,6 +21,16 @@ class DynamicsBackend(ABC):
     def state(self) -> FlightState:
         raise NotImplementedError
 
+    def supports_state_reset(self) -> bool:
+        """Whether reset(state) can physically move the simulated vehicle to state."""
+
+        return True
+
+    def supports_pause_freeze(self) -> bool:
+        """Whether the backend can freeze its physical state while a session is paused."""
+
+        return True
+
     def provenance(self) -> dict[str, Any]:
         """Serializable description of the vehicle backend used for an episode."""
 

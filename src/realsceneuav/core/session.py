@@ -129,12 +129,20 @@ class FlightSession:
                 events = self.controller.consume_events()
                 for event in events:
                     if event.type == ControllerEventType.PAUSE_TOGGLE:
-                        paused = not paused
-                        self._emit_event(
-                            recorder,
-                            "pause" if paused else "resume",
-                            state,
-                        )
+                        if self.dynamics.supports_pause_freeze():
+                            paused = not paused
+                            self._emit_event(
+                                recorder,
+                                "pause" if paused else "resume",
+                                state,
+                            )
+                        else:
+                            self._emit_event(
+                                recorder,
+                                "pause_unsupported",
+                                state,
+                                backend=type(self.dynamics).__name__,
+                            )
                     elif event.type == ControllerEventType.MARK_TARGET:
                         self._emit_event(
                             recorder,
@@ -144,12 +152,20 @@ class FlightSession:
                             distance_to_target_m=self.task.distance_to_target(state.position),
                         )
                     elif event.type == ControllerEventType.RESET:
-                        reset_state = initial.copy()
-                        reset_state.t = state.t
-                        state = self.dynamics.reset(reset_state)
-                        next_camera_t = state.t
-                        self._emit_event(recorder, "reset", state)
-                        self._notify_state(state, command, paused)
+                        if self.dynamics.supports_state_reset():
+                            reset_state = initial.copy()
+                            reset_state.t = state.t
+                            state = self.dynamics.reset(reset_state)
+                            next_camera_t = state.t
+                            self._emit_event(recorder, "reset", state)
+                            self._notify_state(state, command, paused)
+                        else:
+                            self._emit_event(
+                                recorder,
+                                "reset_unsupported",
+                                state,
+                                backend=type(self.dynamics).__name__,
+                            )
                     elif event.type == ControllerEventType.STOP:
                         distance = self.task.distance_to_target(state.position)
                         success = self.task.success(state.position)
