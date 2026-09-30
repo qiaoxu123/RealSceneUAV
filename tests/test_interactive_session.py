@@ -63,3 +63,30 @@ def test_interactive_session_records_events_and_observations(tmp_path):
             assert (root / observation["rgb_file"]).exists()
         if observation["depth_file"]:
             assert (root / observation["depth_file"]).exists()
+
+
+
+def test_user_stop_reports_success_when_already_at_target(tmp_path):
+    scene = MockRealScene()
+    task = sample_task(scene, seed=2)
+    task.start_position = task.target.position.copy()
+    task.max_duration_s = 1.0
+
+    controller = ScriptedController(
+        events_by_poll={0: [ControllerEvent(ControllerEventType.STOP)]}
+    )
+
+    with EpisodeRecorder(tmp_path, task) as recorder:
+        result = FlightSession(
+            scene=scene,
+            task=task,
+            dynamics=ReferenceQuadrotorDynamics(),
+            controller=controller,
+            control_hz=20.0,
+            camera_hz=10.0,
+            realtime=False,
+        ).run(recorder)
+
+    assert result.success is True
+    assert result.termination_reason == "user_stop"
+    assert result.final_distance_m == 0.0
