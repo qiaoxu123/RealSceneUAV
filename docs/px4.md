@@ -86,6 +86,8 @@ PX4 Body : FRD       -> RealSceneUAV Body: FLU
 
 `ReferenceQuadrotorDynamics` 可以瞬移 reset；PX4 不允许伪造该行为。PX4 模式下按 Reset 会记录 `reset_unsupported`，不会让视觉坐标假装回到起点。
 
+同理，PX4 物理状态不能被冻结。PX4 模式下按 Pause 会记录 `pause_unsupported` 并继续发送控制流，避免 `MANUAL_CONTROL` 中断。
+
 ## 8. 当前边界
 
 当前结构是：
