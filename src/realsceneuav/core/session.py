@@ -66,6 +66,15 @@ class FlightSession:
         initial.rpy[2] = self.task.start_yaw
         state = self.dynamics.reset(initial)
 
+        recorder.metadata(
+            scene_id=self.scene.scene_id(),
+            scene_adapter=type(self.scene).__name__,
+            control_hz=self.control_hz,
+            camera_hz=self.camera_hz,
+            realtime=self.realtime,
+            controller=self.controller.provenance(),
+            dynamics=self.dynamics.provenance(),
+        )
         recorder.event("episode_start", state.t)
         observation_available = self._record_observation(recorder, state)
         if not observation_available:
