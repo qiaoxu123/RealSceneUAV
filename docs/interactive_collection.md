@@ -73,6 +73,7 @@ episode_id/
 ├── task.json
 ├── trajectory.csv
 ├── events.json
+├── metadata.json
 ├── observations.csv
 ├── rgb/
 │   └── frame_*.npy
@@ -81,7 +82,9 @@ episode_id/
 ```
 
 `trajectory.csv` preserves both human command and vehicle response. `observations.csv`
-synchronizes visual frames to simulation time.
+synchronizes visual frames to simulation time. `metadata.json` records the scene adapter,
+control/camera rates, controller backend and exact controller mapping, plus the dynamics backend
+and its parameters.
 
 ## 6. Real-scene datasets
 
