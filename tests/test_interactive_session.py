@@ -5,6 +5,11 @@ from realsceneuav.controllers.events import ControllerEvent, ControllerEventType
 from realsceneuav.controllers.scripted import ScriptedController
 from realsceneuav.core.session import FlightSession
 from realsceneuav.dynamics.reference import ReferenceQuadrotorDynamics
+
+
+class NonTeleportDynamics(ReferenceQuadrotorDynamics):
+    def supports_state_reset(self) -> bool:
+        return False
 from realsceneuav.recording.episode import EpisodeRecorder
 from realsceneuav.scenes.mock import MockRealScene
 from realsceneuav.tasks.sampler import sample_task
@@ -97,3 +102,34 @@ def test_user_stop_reports_success_when_already_at_target(tmp_path):
     assert result.success is True
     assert result.termination_reason == "user_stop"
     assert result.final_distance_m == 0.0
+
+
+
+def test_reset_event_is_rejected_for_non_teleportable_backend(tmp_path):
+    scene = MockRealScene()
+    task = sample_task(scene, seed=5)
+    task.max_duration_s = 1.0
+
+    controller = ScriptedController(
+        events_by_poll={
+            1: [ControllerEvent(ControllerEventType.RESET)],
+            3: [ControllerEvent(ControllerEventType.STOP)],
+        }
+    )
+
+    with EpisodeRecorder(tmp_path, task) as recorder:
+        FlightSession(
+            scene=scene,
+            task=task,
+            dynamics=NonTeleportDynamics(),
+            controller=controller,
+            control_hz=20.0,
+            camera_hz=10.0,
+            realtime=False,
+        ).run(recorder)
+
+    events = json.loads((tmp_path / task.episode_id / "events.json").read_text())
+    event_types = [event["type"] for event in events]
+
+    assert "reset" not in event_types
+    assert "reset_unsupported" in event_types
