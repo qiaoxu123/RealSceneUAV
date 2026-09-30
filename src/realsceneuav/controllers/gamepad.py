@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from pathlib import Path
 
 import yaml
@@ -64,7 +64,8 @@ class PygameGamepadController(InteractiveController):
         pygame.joystick.init()
         if pygame.joystick.get_count() <= joystick_index:
             raise RuntimeError("No compatible gamepad detected")
-        self.joystick = pygame.joystick.Joystick(joystick_index)
+        self.joystick_index = int(joystick_index)
+        self.joystick = pygame.joystick.Joystick(self.joystick_index)
         self.joystick.init()
 
         self._pending_events: list[ControllerEvent] = []
@@ -117,3 +118,14 @@ class PygameGamepadController(InteractiveController):
         events = self._pending_events
         self._pending_events = []
         return events
+
+
+    def provenance(self) -> dict[str, object]:
+        return {
+            "backend": type(self).__name__,
+            "joystick_index": self.joystick_index,
+            "device_name": self.joystick.get_name(),
+            "num_axes": self.joystick.get_numaxes(),
+            "num_buttons": self.joystick.get_numbuttons(),
+            "mapping": asdict(self.mapping),
+        }
