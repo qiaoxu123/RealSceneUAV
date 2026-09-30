@@ -220,7 +220,22 @@ realsceneuav-citynav-validate \
 
 详细说明：
 
-[docs/citynav_raster.md](docs/citynav_raster.md)
+- [CityNav raster 坐标与 RGB-D 验证](docs/citynav_raster.md)
+- [CityNav 实时飞行与 Human Trajectory 采集](docs/citynav_live.md)
+
+实时 Switch 飞行：
+
+```bash
+pip install -e ".[controller,citynav]"
+
+realsceneuav-citynav-collect \
+  --trajectory-json data/citynav_train_seen.json \
+  --episode-index 0 \
+  --rgb-png data/rgbd/cambridge_block_2.png \
+  --height-tif data/rgbd/cambridge_block_2.tif \
+  --controller gamepad \
+  --controller-config configs/switch_pro.yaml
+```
 
 ## 7. 数据集扩展方式
 
@@ -267,7 +282,10 @@ class MyDatasetAdapter(SceneAdapter):
 - [x] 官方 block ground-level 查询
 - [x] Human trajectory pose 统一与 replay 基础
 - [x] Top-down trajectory 离线验证
-- [ ] 第一视角 RGB / Depth live viewer
+- [x] 第一视角 RGB / Depth live viewer 基础实现
+- [x] RGB / Depth / Top-down / Instruction 同屏
+- [x] Switch 实时控制与 Human Trajectory 统一采集
+- [ ] CityRefer 完整 object / landmark 解析
 - [ ] OSM landmark layer
 
 ### M3：真实场景 Renderer

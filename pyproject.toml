@@ -29,6 +29,7 @@ realsceneuav-demo = "realsceneuav.cli.demo:main"
 realsceneuav-collect = "realsceneuav.cli.collect:main"
 realsceneuav-controller-check = "realsceneuav.cli.controller_check:main"
 realsceneuav-citynav-validate = "realsceneuav.cli.citynav_validate:main"
+realsceneuav-citynav-collect = "realsceneuav.cli.citynav_collect:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
