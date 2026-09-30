@@ -1,193 +1,209 @@
 # RealSceneUAV
 
-**Real-world scene data + realistic UAV dynamics + human/gamepad control + reproducible trajectory collection.**
+[English](README_EN.md)
 
-RealSceneUAV is designed for aerial navigation research where the **environment comes from real captured scenes** (point clouds, RGB-D, meshes, 3D Gaussian Splatting, maps and target annotations), while the vehicle state evolves through a replaceable UAV dynamics backend.
+**真实场景数据 + UAV 飞行动力学 + Switch/手柄遥控 + 可复现 Human Trajectory 采集。**
 
-It is not intended to be another synthetic city simulator. The project separates **scene data**, **vehicle dynamics**, **human control**, **task generation**, and **episode recording** so that the same flight stack can be used with CityNav/SensatUrban-like datasets or new real-world captures.
+RealSceneUAV 面向语言引导无人机导航与 Human Demonstration 数据采集。与传统合成仿真器不同，本项目强调：
 
-## Why this project?
+> **场景来自真实采集/重建数据，只有无人机运动过程由可替换的飞行动力学后端计算。**
 
-CityNav's CityFlight showed that real reconstructed city data can support human aerial navigation collection, but the public CityNav repository does not provide a reusable CityFlight implementation. Existing open-source drone simulators provide excellent physics, rendering, or PX4 integration, but they are generally not organized around **dataset adapters + language targets + human demonstration collection over real captured scenes**.
-
-RealSceneUAV focuses on that missing layer.
-
-## Design goals
-
-- **Real-scene first**: point cloud / RGB-D / mesh / 3DGS data should be loaded through adapters rather than rebuilt as synthetic worlds.
-- **Gamepad-first human control**: support Switch Pro Controller/Joy-Con and other SDL gamepads with continuous stick input.
-- **Replaceable dynamics**: a small deterministic reference model for CI, then PX4 SITL/HIL, RotorPy, Project AirSim, or other validated backends for experiments.
-- **Dataset-neutral**: CityNav is one adapter, not the architecture.
-- **Full demonstrations**: save raw stick input, state, target, task metadata, events, and later RGB/depth frames.
-- **Reproducible episodes**: seeded task sampling, explicit configuration, versioned schemas, and deterministic CI path.
-
-## Architecture
+因此项目的基本形式是：
 
 ```text
-Real captured data
-(point cloud / RGB-D / mesh / 3DGS / OSM / annotations)
-                         |
-                         v
-                  +---------------+
-                  | SceneAdapter  |
-                  +---------------+
-                         |
-         +---------------+---------------+
-         |                               |
-         v                               v
- +---------------+                +---------------+
- | Task / Target |                | Observation   |
- |   Manager     |                | RGB / Depth   |
- +---------------+                +---------------+
-         |                               ^
-         v                               |
- +---------------+     commands    +---------------+
- | Switch / SDL  | --------------> | Dynamics      |
- | Controller    |                 | Backend       |
- +---------------+                 +---------------+
-                                          |
-                                          v
-                                  +---------------+
-                                  | Flight State  |
-                                  +---------------+
-                                          |
-                                          v
-                                  +---------------+
-                                  | Recorder      |
-                                  +---------------+
+真实场景数据
+Point Cloud / RGB-D / Mesh / 3DGS / OSM
+                    |
+                    v
+              SceneAdapter
+                    |
+         +----------+----------+
+         |                     |
+         v                     v
+   Task / Target          RGB / Depth
+         |                     ^
+         v                     |
+ Switch / Gamepad ---> UAV Dynamics
+                             |
+                             v
+                        Flight State
+                             |
+                             v
+                         Recorder
 ```
 
-### Core interfaces
+## 1. 为什么做这个项目？
 
-**`SceneAdapter`**
-- converts dataset coordinates into a common world frame
-- exposes target objects and instructions
-- returns RGB/depth observations from the real-scene representation
-- provides ground height / geometry queries
+CityNav 的 CityFlight 证明了可以在真实城市重建数据上采集人类无人机导航轨迹，但目前公开的 CityNav 仓库并没有提供可直接复用的 CityFlight 完整实现。
 
-**`DynamicsBackend`**
-- consumes normalized human/autonomous control commands
-- advances the UAV state
-- can be replaced without changing task or dataset code
+另一方面，PX4、AirSim、Pegasus、RotorPy、Flightmare、GS-DroneGym 等项目已经提供了较成熟的动力学、飞控或渲染能力。
 
-**`Controller`**
-- Switch Pro / Joy-Con / Xbox / generic SDL device
-- scripted expert
-- learned policy
-- future PX4/MAVLink command source
+RealSceneUAV 不重复造一个新的“AirSim”，而是重点补齐：
 
-**`EpisodeRecorder`**
-- task metadata
-- synchronized flight state
-- raw human control input
-- distance-to-target and events
-- later: RGB/depth, target marker, collision and human annotations
+- **真实数据集场景接口**；
+- **语言目标与目标选择**；
+- **Switch/手柄连续遥控**；
+- **真实/可替换 UAV 动力学**；
+- **Human Trajectory 完整采集**；
+- **不同数据集统一接入与复现**。
 
-## Current v0.1 scope
+## 2. 当前已经实现
 
-The first commit intentionally keeps the dependency surface small and provides:
+### M0：基础框架
 
-- deterministic 6-DoF reference quadrotor backend
-- generic SDL/pygame gamepad input
-- Switch Pro Controller mapping template
-- dataset-neutral `SceneAdapter`
-- target/task abstractions
-- synchronized trajectory recorder
-- mock real-scene adapter for CI
-- CityNav MTurk trajectory JSON metadata adapter
-- unit tests and GitHub Actions CI
+- [x] 统一 `FlightState` / `ControlCommand`
+- [x] 可替换 `DynamicsBackend`
+- [x] 可替换 `SceneAdapter`
+- [x] Target / Task 抽象
+- [x] CityNav MTurk trajectory JSON 读取
+- [x] 可复现测试与 GitHub Actions CI
 
-> The reference dynamics are **not claimed to be a validated real UAV model**. Their purpose is to make the full pipeline runnable everywhere. Research runs should use a validated backend such as PX4 SITL/HIL or RotorPy.
+### M1：交互式 Human Trajectory 采集
 
-## Installation
+- [x] Switch Pro Controller / SDL 通用手柄
+- [x] 连续 Roll / Pitch / Yaw / Throttle 输入
+- [x] Pause / Resume
+- [x] Stop
+- [x] Reset
+- [x] Mark Target
+- [x] 控制频率与相机采样频率解耦
+- [x] RGB / Depth 同步记录
+- [x] trajectory / event / metadata 完整记录
+- [x] 手柄映射检查工具
 
-Python 3.10+ is recommended.
+详细说明见：
+
+[docs/interactive_collection.md](docs/interactive_collection.md)
+
+## 3. 安装
+
+推荐 Python 3.10+。
 
 ```bash
 git clone https://github.com/qiaoxu123/RealSceneUAV.git
 cd RealSceneUAV
+
 python -m venv .venv
 source .venv/bin/activate
+
 pip install -e ".[dev]"
 pytest -q
 ```
 
-For Switch/gamepad support:
+安装手柄支持：
 
 ```bash
 pip install -e ".[controller]"
+```
+
+## 4. Switch / 手柄控制
+
+默认采用常见 RC 控制语义：
+
+```text
+Left Stick X   -> Yaw
+Left Stick Y   -> Throttle
+
+Right Stick X  -> Roll
+Right Stick Y  -> Pitch
+```
+
+先检测当前系统中的 SDL 映射：
+
+```bash
 realsceneuav-controller-check --seconds 15
 ```
 
-Run a headless reproducible collection smoke test:
-
-```bash
-realsceneuav-collect --controller scripted --duration 2 --no-realtime
-```
-
-Run an interactive gamepad collection:
-
-```bash
-realsceneuav-collect --controller gamepad --controller-config configs/switch_pro.yaml --duration 300 --control-hz 50 --camera-hz 10
-```
-
-For future MAVLink/PX4 integration:
-
-```bash
-pip install -e ".[px4]"
-```
-
-## Reproducible smoke test
-
-```bash
-realsceneuav-demo --output outputs --seconds 2
-```
-
-This creates:
-
-```text
-outputs/mock-real-scene-000000/
-├── task.json
-├── trajectory.csv
-├── events.json
-├── metadata.json
-├── observations.csv
-├── rgb/
-└── depth/
-```
-
-`trajectory.csv` records synchronized:
-
-```text
-t, x, y, z,
-vx, vy, vz,
-roll, pitch, yaw,
-roll_cmd, pitch_cmd, yaw_cmd, throttle_cmd,
-distance_to_target_m
-```
-
-## Human control convention
-
-The default Switch-style mapping follows common RC semantics:
-
-```text
-Left stick X   -> yaw
-Left stick Y   -> throttle
-Right stick X  -> roll
-Right stick Y  -> pitch
-```
-
-Raw stick commands are normalized and recorded. This is deliberately different from CityFlight-style discrete `forward / left / right / up / down` actions because human demonstrations should retain continuous control intent.
-
-The mapping is configurable in:
+然后修改：
 
 ```text
 configs/switch_pro.yaml
 ```
 
-## Dataset integration
+再运行：
 
-A new dataset implements `SceneAdapter` rather than modifying the flight loop:
+```bash
+realsceneuav-collect \
+  --controller gamepad \
+  --controller-config configs/switch_pro.yaml \
+  --duration 300 \
+  --control-hz 50 \
+  --camera-hz 10
+```
+
+## 5. 无手柄可复现测试
+
+```bash
+realsceneuav-collect \
+  --controller scripted \
+  --duration 2 \
+  --no-realtime
+```
+
+会生成：
+
+```text
+outputs/<episode_id>/
+├── task.json
+├── trajectory.csv
+├── observations.csv
+├── events.json
+├── metadata.json
+├── rgb/
+└── depth/
+```
+
+其中：
+
+- `task.json`：起点、目标、语言指令；
+- `trajectory.csv`：位置、速度、姿态、原始控制量；
+- `observations.csv`：视觉帧与时间戳；
+- `events.json`：Stop / Reset / Marker 等事件；
+- `metadata.json`：场景、采样频率、手柄映射、动力学后端及参数。
+
+## 6. CityNav / SensatUrban
+
+RealSceneUAV 已经能够读取 CityNav 发布的 Human Trajectory JSON：
+
+```python
+from realsceneuav.scenes.citynav import CityNavTrajectoryAdapter
+
+scene = CityNavTrajectoryAdapter(
+    "data/citynav/citynav_train_seen.json"
+)
+
+targets = scene.sample_targets()
+human_traj = scene.human_trajectory(0)
+```
+
+当前 M2 正在进一步接入 CityNav 官方使用的真实视觉链：
+
+```text
+SensatUrban UAV 航拍
+        |
+        v
+真实城市 3D 重建
+        |
+        +--> 正射 RGB
+        |
+        +--> Height GeoTIFF
+                  |
+                  v
+             UAV Pose
+                  |
+                  v
+         Perspective Crop
+                  |
+          +-------+-------+
+          |               |
+         RGB          Depth = z - height
+```
+
+这里的 RGB / Depth 来自真实采集城市数据，而不是合成游戏场景。
+
+## 7. 数据集扩展方式
+
+新的真实场景数据集只需要实现 `SceneAdapter`：
 
 ```python
 class MyDatasetAdapter(SceneAdapter):
@@ -197,161 +213,93 @@ class MyDatasetAdapter(SceneAdapter):
     def ground_height(self, x, y) -> float: ...
 ```
 
-### CityNav
+未来计划支持：
 
-The repository already includes a metadata adapter for released CityNav MTurk trajectory JSON files:
+- CityNav / SensatUrban
+- 自采 UAV 点云
+- RGB-D 地图
+- Mesh
+- 3D Gaussian Splatting
+- 其他真实城市场景导航数据集
 
-```python
-from realsceneuav.scenes.citynav import CityNavTrajectoryAdapter
+## 8. 与已有开源方案的关系
 
-scene = CityNavTrajectoryAdapter(
-    "data/citynav/citynav_train_seen.json",
-    ground_height_m=0.0,
-)
-targets = scene.sample_targets()
-human_traj = scene.human_trajectory(0)
-```
+| 项目 | 优势 | RealSceneUAV 的区别 |
+|---|---|---|
+| PX4 SITL/HIL | 成熟飞控与飞行动力学 | 缺少真实导航数据集/Human Trajectory 数据层 |
+| Project AirSim / AirSim | 完整 UAV 仿真和传感器 | 主要面向构建仿真世界 |
+| Pegasus | Isaac Sim + PX4 | 重点是机器人仿真 |
+| RotorPy | 轻量多旋翼动力学 | 没有真实场景导航数据接口 |
+| Flightmare | 高效 UAV RL | 主要依赖 Unity 环境 |
+| GS-DroneGym | 3DGS + UAV + dataset tooling | 更接近，但不是 CityNav 式真实数据集 Human Collection |
+| **RealSceneUAV** | **真实场景适配 + 连续人类控制 + 可替换动力学 + 数据采集** | — |
 
-This exposes target positions, descriptions, scene identifiers, annotation IDs and human pose trajectories. Visual rendering is intentionally kept separate because it should come from the corresponding real SensatUrban RGB-D / point-cloud / 3DGS representation.
+其中 **GS-DroneGym** 与我们的目标最接近。后续 3DGS 等模块优先考虑复用成熟方案，而不是重复实现。
 
-Planned adapters:
+## 9. Roadmap
 
-1. **CityNav / SensatUrban**
-   - CityNav instructions, target objects and human trajectories
-   - SensatUrban point cloud / rasterized RGB-D
-   - OSM landmarks when available
-2. **3D Gaussian Splatting scenes**
-   - real captured scene rendering via `gsplat`
-3. **Generic RGB-D / point-cloud datasets**
-   - local frame registration and target manifests
+### M2：CityNav / SensatUrban 真场景
 
-## Planned data schema
+- [ ] CityRefer object / description 加载
+- [ ] CityNav episode 精确复现
+- [ ] SensatUrban RGB + Height GeoTIFF 接入
+- [ ] ground-height 查询
+- [ ] Human trajectory replay
+- [ ] Top-down trajectory viewer
+- [ ] 第一视角 RGB / Depth live viewer
+- [ ] OSM landmark layer
 
-Each recorded episode will converge on:
+### M3：真实场景 Renderer
+
+- [ ] Point-cloud / raster RGB-D
+- [ ] 3DGS
+- [ ] 真实几何碰撞
+- [ ] visibility query
+
+### M4：飞行动力学
+
+- [ ] PX4 SITL
+- [ ] MAVLink manual control
+- [ ] RotorPy
+- [ ] UAV vehicle profile
+- [ ] Physics / Control / Camera 多频率时钟
+
+### M5：数据集与 Benchmark
+
+- [ ] Seen / Unseen manifest
+- [ ] Target / Start 自动采样
+- [ ] Human session metadata
+- [ ] Dataset validator
+- [ ] Replay tool
+- [ ] Parquet / LeRobot 导出
+
+## 10. 可复现原则
+
+每次正式数据采集至少记录：
+
+- Git commit；
+- 数据集与场景来源；
+- 坐标系和单位；
+- SceneAdapter 版本；
+- Target manifest；
+- UAV dynamics backend；
+- UAV 参数；
+- 手柄映射；
+- 随机种子；
+- control / physics / camera rate。
+
+必须始终区分：
 
 ```text
-episode_xxxxxx/
-├── task.json
-├── trajectory.csv
-├── events.json
-├── rgb/
-├── depth/
-└── metadata.json
+真实场景数据来源
+        !=
+无人机动力学来源
 ```
 
-The long-term schema preserves three different signals instead of collapsing them:
-
-1. **human input**: sticks/buttons
-2. **vehicle response**: pose, velocity, attitude, acceleration
-3. **visual state**: RGB, depth, visible targets/landmarks
-
-This makes the data useful for behavior cloning, VLA training, landmark-arrival detection, active perception, and human flight-strategy analysis.
-
-## Comparison with existing open-source projects
-
-RealSceneUAV should reuse strong components rather than replace them.
-
-| Project | Strongest capability | Gap relative to our target |
-|---|---|---|
-| PX4 SITL/HIL | production flight stack and realistic controller integration | not a real-scene dataset / language-trajectory platform |
-| Project AirSim / AirSim | mature vehicle simulation and sensors | not organized around real dataset adapters and human collection |
-| Pegasus Simulator | PX4 + Isaac Sim robotics integration | primarily simulator/Isaac workflow |
-| RotorPy | lightweight multirotor dynamics, controllers and wind | no real-scene language-navigation data layer |
-| Flightmare | fast quadrotor RL simulation | synthetic Unity-centered rendering workflow |
-| GS-DroneGym | closest project: 3DGS rendering, drone dynamics, RGB/depth, viewer and dataset tooling | no PX4/gamepad-first CityNav-style human collection layer |
-| **RealSceneUAV** | real-data adapters + continuous human control + replaceable dynamics + demonstration collection | this repository |
-
-### Closest existing project: GS-DroneGym
-
-GS-DroneGym is close enough that we should learn from it rather than duplicate it. Its public implementation already provides:
-
-- Gaussian-splat rendering
-- RGB/depth observations
-- quadrotor dynamics
-- collision geometry derived from Gaussians
-- manual viewer
-- trajectory/dataset tooling
-
-RealSceneUAV therefore should **not** spend effort reproducing all of that. Its intended differentiation is:
-
-- explicit support for external real-world navigation datasets such as CityNav/SensatUrban
-- Switch/gamepad continuous human control as a first-class input
-- PX4-compatible dynamics/control path
-- task/target selection and human demonstration collection workflow
-- preservation of raw human controls and vehicle response
-- explicit scene provenance, coordinate frame, target origin and collection provenance
-
-## Roadmap
-
-### M0 - repository foundation (current)
-
-- [x] common state/control schema
-- [x] reference dynamics backend
-- [x] gamepad abstraction
-- [x] scene adapter abstraction
-- [x] target/task abstraction
-- [x] episode recorder
-- [x] CityNav trajectory metadata adapter
-- [x] deterministic tests and CI
-
-### M1 - interactive collection
-
-- [ ] live 3D viewer
-- [x] Switch Pro Controller inspection/calibration CLI
-- [x] pause/reset/mark-target buttons
-- [x] RGB/depth recording at an independent camera rate
-- [x] explicit `STOP` and target-marker events
-- [x] real-time manual collection loop
-
-See [Interactive trajectory collection](docs/interactive_collection.md).
-
-### M2 - CityNav/SensatUrban adapter
-
-- [ ] load CityRefer objects/descriptions
-- [ ] coordinate alignment and ground-height query
-- [ ] reproduce CityNav start/target tasks
-- [ ] OSM landmark layer
-- [ ] import/replay existing human demonstrations
-
-### M3 - real-scene renderer
-
-- [ ] 3DGS renderer backend
-- [ ] point-cloud viewer / rasterized RGB-D backend
-- [ ] scene-scale and coordinate validation
-- [ ] collision/visibility queries from real geometry
-
-### M4 - validated flight dynamics
-
-- [ ] PX4 SITL bridge
-- [ ] MAVLink manual-control bridge
-- [ ] RotorPy backend
-- [ ] vehicle profile files (mass, inertia, thrust limits)
-- [ ] separate simulation/control/camera clocks
-
-### M5 - benchmark and dataset release
-
-- [ ] seen/unseen split manifests
-- [ ] deterministic target/start sampling
-- [ ] human subject/session metadata without personal identifiers
-- [ ] dataset validator and replay tool
-- [ ] export to Parquet / LeRobot-style format
-
-## Reproducibility principles
-
-Every benchmark release should record:
-
-- repository commit
-- adapter version
-- scene/data source and checksum
-- coordinate frame and units
-- target manifest version
-- vehicle backend and parameters
-- controller mapping
-- random seed
-- control/physics/camera rates
-
-Do not treat a rendered reconstruction as ground-truth physics. Scene geometry provenance and vehicle-dynamics provenance must remain separate.
+即使场景来自真实城市重建，也不能因此宣称当前参考动力学等同于真实无人机。
 
 ## License
 
-Code is released under the MIT License. External datasets, PX4, CityNav/SensatUrban, and third-party renderers retain their own licenses and must be downloaded/used according to their respective terms.
+代码采用 MIT License。
+
+CityNav、SensatUrban、PX4 以及其他第三方数据和组件仍遵循其各自许可证。
