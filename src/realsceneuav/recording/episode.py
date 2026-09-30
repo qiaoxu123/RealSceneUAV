@@ -63,6 +63,7 @@ class EpisodeRecorder:
         self._observations_writer.writeheader()
 
         self._events: list[dict[str, Any]] = []
+        self._metadata: dict[str, Any] = {}
         self._frame_index = 0
         self._closed = False
 
@@ -143,6 +144,11 @@ class EpisodeRecorder:
     def event(self, event_type: str, t: float, **payload: Any) -> None:
         self._events.append({"type": event_type, "t": float(t), **payload})
 
+    def metadata(self, **payload: Any) -> None:
+        """Merge serializable runtime provenance into this episode."""
+
+        self._metadata.update(payload)
+
     def close(self) -> None:
         if self._closed:
             return
@@ -150,6 +156,9 @@ class EpisodeRecorder:
         self._observations_fp.close()
         (self.root / "events.json").write_text(
             json.dumps(self._events, indent=2, default=_json_default)
+        )
+        (self.root / "metadata.json").write_text(
+            json.dumps(self._metadata, indent=2, default=_json_default)
         )
         self._closed = True
 
