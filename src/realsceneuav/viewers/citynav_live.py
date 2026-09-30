@@ -125,10 +125,13 @@ class CityNavLiveViewer(SessionObserver):
         pygame.draw.circle(self.screen, (50, 255, 80), current, 7)
 
         yaw = float(state.rpy[2])
-        heading_length = 24
-        endpoint = (
-            int(round(current[0] + heading_length * np.cos(yaw))),
-            int(round(current[1] + heading_length * np.sin(yaw))),
+        heading_world = state.position[:2] + 8.0 * np.array(
+            [np.cos(yaw), np.sin(yaw)],
+            dtype=np.float64,
+        )
+        endpoint = self._map_point(
+            float(heading_world[0]),
+            float(heading_world[1]),
         )
         pygame.draw.line(self.screen, (50, 255, 80), current, endpoint, 3)
 
