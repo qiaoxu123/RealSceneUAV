@@ -2,14 +2,16 @@ from __future__ import annotations
 
 import time
 from dataclasses import dataclass
+from typing import Any
 
 from realsceneuav.controllers.base import Controller
 from realsceneuav.controllers.events import ControllerEventType
 from realsceneuav.controllers.interactive import InteractiveController
-from realsceneuav.core.types import FlightState
+from realsceneuav.core.observer import SessionObserver
+from realsceneuav.core.types import ControlCommand, FlightState
 from realsceneuav.dynamics.base import DynamicsBackend
 from realsceneuav.recording.episode import EpisodeRecorder
-from realsceneuav.scenes.base import SceneAdapter
+from realsceneuav.scenes.base import Observation, SceneAdapter
 from realsceneuav.tasks.navigation import NavigationTask
 
 
@@ -33,6 +35,7 @@ class FlightSession:
         control_hz: float = 50.0,
         camera_hz: float = 10.0,
         realtime: bool = False,
+        observers: list[SessionObserver] | None = None,
     ) -> None:
         if control_hz <= 0:
             raise ValueError("control_hz must be positive")
@@ -48,14 +51,46 @@ class FlightSession:
         self.control_hz = float(control_hz)
         self.camera_hz = float(camera_hz)
         self.realtime = bool(realtime)
+        self.observers = list(observers or [])
 
-    def _record_observation(self, recorder: EpisodeRecorder, state: FlightState) -> bool:
+    def _notify_start(self, state: FlightState) -> None:
+        for observer in self.observers:
+            observer.on_start(self.scene, self.task, state.copy())
+
+    def _notify_state(
+        self,
+        state: FlightState,
+        command: ControlCommand,
+        paused: bool,
+    ) -> None:
+        for observer in self.observers:
+            observer.on_state(state.copy(), command, paused)
+
+    def _emit_event(
+        self,
+        recorder: EpisodeRecorder,
+        event_type: str,
+        state: FlightState,
+        **payload: Any,
+    ) -> None:
+        recorder.event(event_type, state.t, **payload)
+        for observer in self.observers:
+            observer.on_event(event_type, state.copy(), dict(payload))
+
+    def _record_observation(
+        self,
+        recorder: EpisodeRecorder,
+        state: FlightState,
+    ) -> Observation | None:
         try:
             observation = self.scene.observation(state.position, state.rpy)
         except NotImplementedError:
-            return False
+            return None
+
         recorder.record_observation(state.t, observation)
-        return True
+        for observer in self.observers:
+            observer.on_observation(state.copy(), observation)
+        return observation
 
     def run(self, recorder: EpisodeRecorder) -> SessionResult:
         dt = 1.0 / self.control_hz
@@ -76,10 +111,12 @@ class FlightSession:
             controller=self.controller.provenance(),
             dynamics=self.dynamics.provenance(),
         )
-        recorder.event("episode_start", state.t)
-        observation_available = self._record_observation(recorder, state)
+        self._notify_start(state)
+        self._emit_event(recorder, "episode_start", state)
+
+        observation_available = self._record_observation(recorder, state) is not None
         if not observation_available:
-            recorder.event("observation_unavailable", state.t)
+            self._emit_event(recorder, "observation_unavailable", state)
         next_camera_t = state.t + camera_period
 
         paused = False
@@ -93,11 +130,16 @@ class FlightSession:
                 for event in events:
                     if event.type == ControllerEventType.PAUSE_TOGGLE:
                         paused = not paused
-                        recorder.event("pause" if paused else "resume", state.t)
+                        self._emit_event(
+                            recorder,
+                            "pause" if paused else "resume",
+                            state,
+                        )
                     elif event.type == ControllerEventType.MARK_TARGET:
-                        recorder.event(
+                        self._emit_event(
+                            recorder,
                             "target_marker",
-                            state.t,
+                            state,
                             position=state.position.tolist(),
                             distance_to_target_m=self.task.distance_to_target(state.position),
                         )
@@ -106,13 +148,15 @@ class FlightSession:
                         reset_state.t = state.t
                         state = self.dynamics.reset(reset_state)
                         next_camera_t = state.t
-                        recorder.event("reset", state.t)
+                        self._emit_event(recorder, "reset", state)
+                        self._notify_state(state, command, paused)
                     elif event.type == ControllerEventType.STOP:
                         distance = self.task.distance_to_target(state.position)
                         success = self.task.success(state.position)
-                        recorder.event(
+                        self._emit_event(
+                            recorder,
                             "user_stop",
-                            state.t,
+                            state,
                             success=success,
                             distance_to_target_m=distance,
                         )
@@ -121,6 +165,7 @@ class FlightSession:
             if not paused:
                 state = self.dynamics.step(command, dt)
                 recorder.record(state, command, self.task)
+                self._notify_state(state, command, paused=False)
 
                 if observation_available and state.t + 1e-12 >= next_camera_t:
                     self._record_observation(recorder, state)
@@ -128,7 +173,7 @@ class FlightSession:
                         next_camera_t += camera_period
 
                 if self.task.success(state.position):
-                    recorder.event("success", state.t)
+                    self._emit_event(recorder, "success", state)
                     return SessionResult(
                         True,
                         state.t,
@@ -140,13 +185,15 @@ class FlightSession:
                     float(state.position[0]), float(state.position[1])
                 )
                 if state.position[2] < ground:
-                    recorder.event("ground_collision", state.t)
+                    self._emit_event(recorder, "ground_collision", state)
                     return SessionResult(
                         False,
                         state.t,
                         self.task.distance_to_target(state.position),
                         "ground_collision",
                     )
+            else:
+                self._notify_state(state, command, paused=True)
 
             if self.realtime:
                 next_wall_tick += dt
@@ -154,13 +201,16 @@ class FlightSession:
                 if remaining > 0:
                     time.sleep(remaining)
                 elif remaining < -5.0 * dt:
-                    # Do not accumulate unbounded lag if rendering or the OS stalls.
                     next_wall_tick = time.monotonic()
 
-        recorder.event("timeout", state.t)
+        self._emit_event(recorder, "timeout", state)
         return SessionResult(
             False,
             state.t,
             self.task.distance_to_target(state.position),
             "timeout",
         )
+
+    def close_observers(self) -> None:
+        for observer in self.observers:
+            observer.close()
