@@ -28,7 +28,11 @@ def main() -> None:
     joystick = pygame.joystick.Joystick(args.index)
     joystick.init()
     print(f"name={joystick.get_name()!r}")
-    print(f"axes={joystick.get_numaxes()} buttons={joystick.get_numbuttons()} hats={joystick.get_numhats()}")
+    print(
+        f"axes={joystick.get_numaxes()} "
+        f"buttons={joystick.get_numbuttons()} "
+        f"hats={joystick.get_numhats()}"
+    )
     print("Move one stick / press one button at a time. Ctrl-C to stop.")
 
     end = time.monotonic() + args.seconds
