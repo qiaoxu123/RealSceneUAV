@@ -116,6 +116,19 @@ For Switch/gamepad support:
 
 ```bash
 pip install -e ".[controller]"
+realsceneuav-controller-check --seconds 15
+```
+
+Run a headless reproducible collection smoke test:
+
+```bash
+realsceneuav-collect --controller scripted --duration 2 --no-realtime
+```
+
+Run an interactive gamepad collection:
+
+```bash
+realsceneuav-collect --controller gamepad --duration 300 --control-hz 50 --camera-hz 10
 ```
 
 For future MAVLink/PX4 integration:
@@ -280,10 +293,13 @@ RealSceneUAV therefore should **not** spend effort reproducing all of that. Its 
 ### M1 - interactive collection
 
 - [ ] live 3D viewer
-- [ ] Switch Pro Controller calibration CLI
-- [ ] pause/reset/mark-target buttons
-- [ ] RGB/depth recording at an independent camera rate
-- [ ] explicit `STOP` and target-marker events
+- [x] Switch Pro Controller inspection/calibration CLI
+- [x] pause/reset/mark-target buttons
+- [x] RGB/depth recording at an independent camera rate
+- [x] explicit `STOP` and target-marker events
+- [x] real-time manual collection loop
+
+See [Interactive trajectory collection](docs/interactive_collection.md).
 
 ### M2 - CityNav/SensatUrban adapter
 
