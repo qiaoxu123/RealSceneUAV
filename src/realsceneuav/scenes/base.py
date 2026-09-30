@@ -45,3 +45,11 @@ class SceneAdapter(ABC):
     @abstractmethod
     def ground_height(self, x: float, y: float) -> float:
         raise NotImplementedError
+
+    def provenance(self) -> dict[str, Any]:
+        """Serializable description of the scene/data source used by an episode."""
+
+        return {
+            "scene_id": self.scene_id(),
+            "adapter": type(self).__name__,
+        }
