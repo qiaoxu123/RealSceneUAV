@@ -1,5 +1,7 @@
 # RealSceneUAV
 
+[中文](README.md)
+
 **Real-world scene data + realistic UAV dynamics + human/gamepad control + reproducible trajectory collection.**
 
 RealSceneUAV is designed for aerial navigation research where the **environment comes from real captured scenes** (point clouds, RGB-D, meshes, 3D Gaussian Splatting, maps and target annotations), while the vehicle state evolves through a replaceable UAV dynamics backend.
