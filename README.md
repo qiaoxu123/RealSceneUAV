@@ -128,7 +128,7 @@ realsceneuav-collect --controller scripted --duration 2 --no-realtime
 Run an interactive gamepad collection:
 
 ```bash
-realsceneuav-collect --controller gamepad --duration 300 --control-hz 50 --camera-hz 10
+realsceneuav-collect --controller gamepad --controller-config configs/switch_pro.yaml --duration 300 --control-hz 50 --camera-hz 10
 ```
 
 For future MAVLink/PX4 integration:
