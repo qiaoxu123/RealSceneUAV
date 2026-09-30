@@ -2,13 +2,14 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from realsceneuav.controllers.base import Controller
+from realsceneuav.controllers.events import ControllerEvent, ControllerEventType
+from realsceneuav.controllers.interactive import InteractiveController
 from realsceneuav.core.types import ControlCommand
 
 
 @dataclass(slots=True)
 class GamepadMapping:
-    """SDL axis mapping; override in YAML for different controllers."""
+    """SDL axis/button mapping; override after running controller-check."""
 
     roll_axis: int = 2
     pitch_axis: int = 3
@@ -20,9 +21,19 @@ class GamepadMapping:
     invert_throttle: bool = True
     deadzone: float = 0.06
 
+    # SDL joystick button indices are driver/platform dependent.
+    mark_target_button: int = 0
+    stop_button: int = 1
+    reset_button: int = 3
+    pause_button: int = 6
 
-class PygameGamepadController(Controller):
-    """Generic SDL controller for Switch Pro Controller, Joy-Con pairs, etc."""
+
+class PygameGamepadController(InteractiveController):
+    """Generic SDL controller for Switch Pro Controller, Joy-Con pairs, etc.
+
+    Continuous stick values and discrete operator events are deliberately separated.
+    Buttons use rising-edge detection so holding a button never floods the recorder.
+    """
 
     def __init__(self, mapping: GamepadMapping | None = None, joystick_index: int = 0) -> None:
         try:
@@ -39,6 +50,11 @@ class PygameGamepadController(Controller):
         self.joystick = pygame.joystick.Joystick(joystick_index)
         self.joystick.init()
 
+        self._pending_events: list[ControllerEvent] = []
+        self._previous_buttons = [
+            int(self.joystick.get_button(i)) for i in range(self.joystick.get_numbuttons())
+        ]
+
     def _axis(self, index: int, invert: bool) -> float:
         value = float(self.joystick.get_axis(index))
         if invert:
@@ -47,8 +63,29 @@ class PygameGamepadController(Controller):
             return 0.0
         return max(-1.0, min(1.0, value))
 
+    def _button_pressed(self, index: int, current: list[int]) -> bool:
+        if index < 0 or index >= len(current):
+            return False
+        return current[index] == 1 and self._previous_buttons[index] == 0
+
+    def _poll_button_events(self) -> None:
+        current = [
+            int(self.joystick.get_button(i)) for i in range(self.joystick.get_numbuttons())
+        ]
+        mapping = (
+            (self.mapping.pause_button, ControllerEventType.PAUSE_TOGGLE),
+            (self.mapping.stop_button, ControllerEventType.STOP),
+            (self.mapping.mark_target_button, ControllerEventType.MARK_TARGET),
+            (self.mapping.reset_button, ControllerEventType.RESET),
+        )
+        for button, event_type in mapping:
+            if self._button_pressed(button, current):
+                self._pending_events.append(ControllerEvent(event_type))
+        self._previous_buttons = current
+
     def poll(self) -> ControlCommand:
         self._pygame.event.pump()
+        self._poll_button_events()
         m = self.mapping
         throttle_raw = self._axis(m.throttle_axis, m.invert_throttle)
         throttle = (throttle_raw + 1.0) / 2.0
@@ -58,3 +95,8 @@ class PygameGamepadController(Controller):
             yaw=self._axis(m.yaw_axis, m.invert_yaw),
             throttle=throttle,
         ).clipped()
+
+    def consume_events(self) -> list[ControllerEvent]:
+        events = self._pending_events
+        self._pending_events = []
+        return events
