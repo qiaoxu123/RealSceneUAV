@@ -129,12 +129,20 @@ class FlightSession:
                 events = self.controller.consume_events()
                 for event in events:
                     if event.type == ControllerEventType.PAUSE_TOGGLE:
-                        paused = not paused
-                        self._emit_event(
-                            recorder,
-                            "pause" if paused else "resume",
-                            state,
-                        )
+                        if self.dynamics.supports_pause_freeze():
+                            paused = not paused
+                            self._emit_event(
+                                recorder,
+                                "pause" if paused else "resume",
+                                state,
+                            )
+                        else:
+                            self._emit_event(
+                                recorder,
+                                "pause_unsupported",
+                                state,
+                                backend=type(self.dynamics).__name__,
+                            )
                     elif event.type == ControllerEventType.MARK_TARGET:
                         self._emit_event(
                             recorder,
