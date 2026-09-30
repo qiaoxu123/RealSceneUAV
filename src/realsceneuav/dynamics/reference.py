@@ -87,7 +87,6 @@ class ReferenceQuadrotorDynamics(DynamicsBackend):
         )
         return self._state.copy()
 
-
     def provenance(self) -> dict[str, object]:
         return {
             "backend": type(self).__name__,
