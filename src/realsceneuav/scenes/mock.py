@@ -24,7 +24,8 @@ class MockRealScene(SceneAdapter):
     def observation(self, position: np.ndarray, rpy: np.ndarray) -> Observation:
         rgb = np.zeros((64, 64, 3), dtype=np.uint8)
         depth = np.full((64, 64), 50.0, dtype=np.float32)
-        return Observation(rgb=rgb, depth=depth, metadata={"pose": [*position, *rpy]})
+        pose = [float(value) for value in np.concatenate([position, rpy])]
+        return Observation(rgb=rgb, depth=depth, metadata={"pose": pose})
 
     def ground_height(self, x: float, y: float) -> float:
         return 0.0
