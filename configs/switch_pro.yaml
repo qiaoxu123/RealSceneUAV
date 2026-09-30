@@ -11,3 +11,9 @@ controller:
     invert_roll: false
     invert_pitch: true
     deadzone: 0.06
+    # SDL joystick button indices vary by OS/driver.
+    # Run: realsceneuav-controller-check --seconds 15
+    mark_target_button: 0
+    stop_button: 1
+    reset_button: 3
+    pause_button: 6

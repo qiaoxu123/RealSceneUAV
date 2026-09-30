@@ -22,6 +22,8 @@ dev = ["pytest>=8.0", "ruff>=0.6"]
 
 [project.scripts]
 realsceneuav-demo = "realsceneuav.cli.demo:main"
+realsceneuav-collect = "realsceneuav.cli.collect:main"
+realsceneuav-controller-check = "realsceneuav.cli.controller_check:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]

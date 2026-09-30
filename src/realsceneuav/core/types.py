@@ -18,7 +18,7 @@ class ControlCommand:
     yaw: float = 0.0
     throttle: float = 0.5
 
-    def clipped(self) -> "ControlCommand":
+    def clipped(self) -> ControlCommand:
         return ControlCommand(
             roll=float(np.clip(self.roll, -1.0, 1.0)),
             pitch=float(np.clip(self.pitch, -1.0, 1.0)),
@@ -41,11 +41,11 @@ class FlightState:
     angular_velocity: np.ndarray
 
     @classmethod
-    def zero(cls) -> "FlightState":
+    def zero(cls) -> FlightState:
         z = np.zeros(3, dtype=np.float64)
         return cls(0.0, z.copy(), z.copy(), z.copy(), z.copy())
 
-    def copy(self) -> "FlightState":
+    def copy(self) -> FlightState:
         return FlightState(
             t=float(self.t),
             position=self.position.copy(),
