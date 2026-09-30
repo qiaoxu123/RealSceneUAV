@@ -15,7 +15,12 @@ def _pose_to_rpy(pose5d: np.ndarray) -> np.ndarray:
     return np.asarray([0.0, pose5d[4], pose5d[3]], dtype=np.float64)
 
 
-def _save_topdown(scene: CityNavRasterScene, trajectory: np.ndarray, target: np.ndarray, path: Path) -> None:
+def _save_topdown(
+    scene: CityNavRasterScene,
+    trajectory: np.ndarray,
+    target: np.ndarray,
+    path: Path,
+) -> None:
     cv2 = scene._cv2
     image = scene.orthographic_rgb
     height, width = image.shape[:2]
