@@ -16,6 +16,32 @@ class RasterShape:
     width: int = 256
 
 
+def citynav_view_area_world(
+    position: np.ndarray,
+    yaw: float,
+    ground_level_m: float,
+) -> np.ndarray:
+    """Match CityNav's square aerial view footprint in world XY coordinates."""
+
+    center = np.asarray(position[:2], dtype=np.float64)
+    altitude = float(position[2]) - float(ground_level_m)
+    if altitude <= 0:
+        raise ValueError(
+            f"UAV altitude must be above ground level ({ground_level_m:.3f} m)"
+        )
+
+    front = np.array([np.cos(yaw), np.sin(yaw)], dtype=np.float64)
+    left = np.array([-np.sin(yaw), np.cos(yaw)], dtype=np.float64)
+    return np.stack(
+        [
+            center + altitude * (front + left),
+            center + altitude * (front - left),
+            center + altitude * (-front - left),
+            center + altitude * (-front + left),
+        ]
+    )
+
+
 class CityNavRasterScene(SceneAdapter):
     """CityNav-compatible observation adapter over real SensatUrban raster data.
 
@@ -106,23 +132,7 @@ class CityNavRasterScene(SceneAdapter):
         return float(col), float(row)
 
     def _view_area_world(self, position: np.ndarray, yaw: float) -> np.ndarray:
-        center = np.asarray(position[:2], dtype=np.float64)
-        altitude = float(position[2]) - self.ground_level_m
-        if altitude <= 0:
-            raise ValueError(
-                f"UAV altitude must be above ground level ({self.ground_level_m:.3f} m)"
-            )
-
-        front = np.array([np.cos(yaw), np.sin(yaw)], dtype=np.float64)
-        left = np.array([-np.sin(yaw), np.cos(yaw)], dtype=np.float64)
-        return np.stack(
-            [
-                center + altitude * (front + left),
-                center + altitude * (front - left),
-                center + altitude * (-front - left),
-                center + altitude * (-front + left),
-            ]
-        )
+        return citynav_view_area_world(position, yaw, self.ground_level_m)
 
     def _view_area_pixels(self, position: np.ndarray, yaw: float) -> np.ndarray:
         corners = self._view_area_world(position, yaw)
