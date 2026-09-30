@@ -69,6 +69,7 @@ class FlightSession:
         recorder.metadata(
             scene_id=self.scene.scene_id(),
             scene_adapter=type(self.scene).__name__,
+            scene=self.scene.provenance(),
             control_hz=self.control_hz,
             camera_hz=self.camera_hz,
             realtime=self.realtime,
