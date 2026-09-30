@@ -25,3 +25,10 @@ class ScriptedController(InteractiveController):
         events = self._pending
         self._pending = []
         return events
+
+
+    def provenance(self) -> dict[str, object]:
+        return {
+            "backend": type(self).__name__,
+            "command": self.command.to_dict(),
+        }
