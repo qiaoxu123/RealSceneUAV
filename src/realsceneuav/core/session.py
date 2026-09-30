@@ -98,13 +98,15 @@ class FlightSession:
                         next_camera_t = state.t
                         recorder.event("reset", state.t)
                     elif event.type == ControllerEventType.STOP:
-                        recorder.event("user_stop", state.t)
-                        return SessionResult(
-                            False,
-                            state.t,
-                            self.task.distance_to_target(state.position),
+                        distance = self.task.distance_to_target(state.position)
+                        success = self.task.success(state.position)
+                        recorder.event(
                             "user_stop",
+                            state.t,
+                            success=success,
+                            distance_to_target_m=distance,
                         )
+                        return SessionResult(success, state.t, distance, "user_stop")
 
             if not paused:
                 state = self.dynamics.step(command, dt)
