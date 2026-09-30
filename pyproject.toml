@@ -17,6 +17,10 @@ dependencies = [
 
 [project.optional-dependencies]
 controller = ["pygame>=2.5"]
+citynav = [
+  "opencv-python-headless>=4.8",
+  "rasterio>=1.3",
+]
 px4 = ["pymavlink>=2.4.42"]
 dev = ["pytest>=8.0", "ruff>=0.6"]
 
@@ -24,6 +28,7 @@ dev = ["pytest>=8.0", "ruff>=0.6"]
 realsceneuav-demo = "realsceneuav.cli.demo:main"
 realsceneuav-collect = "realsceneuav.cli.collect:main"
 realsceneuav-controller-check = "realsceneuav.cli.controller_check:main"
+realsceneuav-citynav-validate = "realsceneuav.cli.citynav_validate:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
