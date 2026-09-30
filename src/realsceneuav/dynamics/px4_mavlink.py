@@ -372,6 +372,33 @@ class Px4MavlinkBackend(DynamicsBackend):
             )
         self.connection.set_mode(mapping[mode_name])
 
+    def _wait_armed_state(
+        self,
+        armed: bool,
+        timeout_s: float,
+        manual_rate_hz: float = 20.0,
+    ) -> None:
+        deadline = time.monotonic() + timeout_s
+        period = 1.0 / manual_rate_hz
+        safe_command = ControlCommand(throttle=0.0)
+
+        while time.monotonic() < deadline:
+            self._send_manual_control(safe_command)
+            heartbeat = self.connection.recv_match(
+                type="HEARTBEAT",
+                blocking=False,
+            )
+            if heartbeat is not None:
+                base_mode = int(getattr(heartbeat, "base_mode", 0))
+                flag = self._mavutil.mavlink.MAV_MODE_FLAG_SAFETY_ARMED
+                is_armed = bool(base_mode & flag)
+                if is_armed == armed:
+                    return
+            time.sleep(period)
+
+        state = "armed" if armed else "disarmed"
+        raise TimeoutError(f"PX4 did not become {state} within {timeout_s:.1f} s")
+
     def arm(self, timeout_s: float = 10.0) -> None:
         self.connection.mav.command_long_send(
             self.target_system,
@@ -386,7 +413,7 @@ class Px4MavlinkBackend(DynamicsBackend):
             0.0,
             0.0,
         )
-        self.connection.motors_armed_wait(timeout=timeout_s)
+        self._wait_armed_state(True, timeout_s)
 
     def disarm(self, timeout_s: float = 10.0) -> None:
         self.connection.mav.command_long_send(
@@ -402,7 +429,7 @@ class Px4MavlinkBackend(DynamicsBackend):
             0.0,
             0.0,
         )
-        self.connection.motors_disarmed_wait(timeout=timeout_s)
+        self._wait_armed_state(False, timeout_s)
 
     def provenance(self) -> dict[str, object]:
         return {
